@@ -9,19 +9,16 @@ const MinifyPlugin = require('babel-minify-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const mergeJSON = require('handlebars-webpack-plugin/utils/mergeJSON');
-const OptimizeCssAssetsPlugin =   require('optimize-css-assets-webpack-plugin');
-
+const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin'); // Añadir esta línea
 
 // Project config data.
-// Go here to change stuff for the whole demo, ie, change the navbar.
-// Also go here for the various data loops, ie, category products, slideshows
 const projectData = mergeJSON(path.join(__dirname, '/src/data/**/*.json'));
 
-
-//PurgeCSS Paths
+// PurgeCSS Paths
 const purgeCSSPaths = {
-    src: path.join(__dirname, 'src', 'html'),
-    partials: path.join(__dirname, 'src', 'partials')
+    src: path.join(__dirname, 'src/html', 'html'),
+    partials: path.join(__dirname, 'src/html', 'partials')
 }
 
 // paths used in various placed in webpack config
@@ -46,15 +43,15 @@ const paths = {
     }
 }
 
-
 // Main webpack config options.
 const wPackConfig = {
     entry: {
-        'libs':   [paths.src.scss + '/libs.scss'],
-        'theme':     [paths.src.js + '/theme.js', paths.src.scss + '/theme.scss']
-      },
+        'libs': [paths.src.scss + '/libs.scss'],
+        'theme': [paths.src.js + '/theme.js', paths.src.scss + '/theme.scss']
+    },
     output: {
         filename: paths.dist.js + '/[name].bundle.js',
+        path: path.resolve(__dirname, 'dist'), // Asegúrate de definir el path de salida
     },
     devtool: 'source-map',
     mode: 'development',
@@ -69,7 +66,6 @@ const wPackConfig = {
                     loader: 'css-loader',
                     options: {
                         url: false,
-                        // sourceMap: true,
                     },
                 },
                 {
@@ -77,56 +73,54 @@ const wPackConfig = {
                 },
                 {
                     loader: 'sass-loader',
-                    // options: {
-                    //     sourceMap: true,
-                    //     sassOptions: {
-                    //         indentWidth: 4,
-                    //         outputStyle: 'expanded',
-                    //         sourceComments: true
-                    //     }
-                    // }
                 },
             ],
         }, ]
     },
     optimization: {
         splitChunks: {
-          cacheGroups: {
-            vendor: {
-              test:   /[\\/](node_modules)[\\/].+\.js$/,
-              name:   'vendor',
-              chunks: 'all'
+            cacheGroups: {
+                vendor: {
+                    test: /[\\/](node_modules)[\\/].+\.js$/,
+                    name: 'vendor',
+                    chunks: 'all'
+                }
             }
-          }
         },
         minimizer: [
-          new OptimizeCssAssetsPlugin({
-            cssProcessorOptions: {
-              map: {
-                inline: false,
-              },
-            },
-            cssProcessorPluginOptions: {
-              preset: [
-                'default',
-                {
-                  discardComments: {
-                    removeAll: true,
-                  },
+            new OptimizeCssAssetsPlugin({
+                cssProcessorOptions: {
+                    map: {
+                        inline: false,
+                    },
                 },
-              ],
-            },
-          }),
-          new TerserPlugin({
-            extractComments: false,
-            terserOptions: {
-              output: {
-                comments: false,
-              },
-            },
-          }),
+                cssProcessorPluginOptions: {
+                    preset: [
+                        'default',
+                        {
+                            discardComments: {
+                                removeAll: true,
+                            },
+                        },
+                    ],
+                },
+            }),
+            new TerserPlugin({
+                extractComments: false,
+                terserOptions: {
+                    output: {
+                        comments: false,
+                    },
+                },
+            }),
         ],
-      },
+    },
+    devServer: {
+        contentBase: path.join(__dirname, 'dist'),
+        compress: true,
+        port: 9000,
+        open: true, // Esto abrirá el navegador automáticamente
+    },
     plugins: [
         new webpack.ProgressPlugin(),
         new CopyPlugin({
@@ -157,6 +151,10 @@ const wPackConfig = {
                 }
             ],
         }),
+        new HtmlWebpackPlugin({ // Añadir esta configuración
+            template: './src/html/index.html',
+            filename: 'index.html',
+        }),
         new HandlebarsPlugin({
             entry: path.join(process.cwd(), 'src', 'html', '**', '*.html'),
             output: path.join(process.cwd(), 'dist', '[path]', '[name].html'),
@@ -179,8 +177,10 @@ const wPackConfig = {
                     console.log(data);
                 },
                 limit: function(arr, limit) {
-                  if (!Array.isArray(arr)) { return []; }
-                  return arr.slice(0, limit);
+                    if (!Array.isArray(arr)) {
+                        return [];
+                    }
+                    return arr.slice(0, limit);
                 }
             },
             onBeforeSave: function(Handlebars, res, file) {
